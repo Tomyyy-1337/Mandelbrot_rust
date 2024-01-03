@@ -42,7 +42,7 @@ impl Mandelbrot {
         self.center_y += y;
     }
 
-    pub fn calculate_mandelbrot(&mut self) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
+    pub fn calculate_mandelbrot(&mut self) -> ImageBuffer<image::Rgb<u8>, Vec<u8>> {
         let square_size:u32 = 32;
         let mut imgbuf = ImageBuffer::new(self.width, self.height);
         let mut squares:Vec<Square> = Vec::new();
@@ -55,38 +55,26 @@ impl Mandelbrot {
                 squares.push(Square::new(x, y, self.zoom, square_size, self.max_iter));
             }
         }
-        
         let square_results:Vec<(Square,SquareResult)> = squares
-            .into_par_iter().map(|square| {
-                if let Some(sqr) = self.last_squares.get(&square) {
-                    return (square, sqr.clone())
-                }
-                (square, square.calculate_square())
-            })
-            .collect();
+        .into_par_iter().map(|square| {
+            if let Some(sqr) = self.last_squares.get(&square) {
+                return (square, sqr.clone())
+            }
+            (square, square.calculate_square())
+        })
+        .collect();
 
         square_results.iter().for_each(|(_, square_result)| {
             for pixel in square_result.clone().into_iter() {
                 if (pixel.x - top_x) >= self.width as i64 || (pixel.y - top_y) >= self.height as i64 || pixel.x < top_x || pixel.y < top_y {
                     continue
                 }
-                let color = if pixel.iterations == 0 {
-                    Rgb([0, 0, 0])
-                } else {
-                    let (r,g,b) = if pixel.iterations < 32 {
-                        (0,0, pixel.iterations as u8 * 8 )
-                    } else if (pixel.iterations / 32) % 2 == 1 {
-                        (0, pixel.iterations as u8 % 32 * 8, 255)
-                    } else {
-                        (0,255 - pixel.iterations as u8 % 32 * 8, 255)
-                    };
-                    Rgb([r, g, b])
-                };
-                imgbuf.put_pixel((pixel.x - top_x) as u32, (pixel.y - top_y) as u32, color);
+                let x = (pixel.x - top_x) as u32;
+                let y = (pixel.y - top_y) as u32;
+                imgbuf.put_pixel(x, y, pixel.color);
             }
         });
-    
-        // self.last_squares = square_results.into_iter().collect();
+
         for (square, square_result) in square_results.into_iter() {
             self.last_squares.insert(square, square_result);
         }
@@ -112,6 +100,21 @@ impl Square {
             size,
             max_iter,
         }
+    }
+
+    fn calculate_color(color: u32) -> Rgb<u8> {
+        let num_colors = 70;
+    
+        if color == 0 {
+            return Rgb([0,0,0]);
+        } 
+        let limited_input = color % num_colors + 12;
+        let hue = (limited_input as f32 / num_colors as f32) * 2.0 * std::f32::consts::PI;  
+        // Calculate the RGB values
+        let r = ((hue.sin() * 0.5 + 0.5) * 255.0) as u8;
+        let g = ((hue.cos() * 0.5 + 0.5) * 255.0) as u8;
+        let b = (((hue + std::f32::consts::PI / 2.0).cos() * 0.5 + 0.5) * 255.0) as u8;
+        Rgb([r,g,b])
     }
     
     pub fn calculate_square(&self) -> SquareResult {
@@ -145,25 +148,25 @@ impl Square {
             }
         } 
         if all_equal {
-            return SquareResult::new(vec![prev; (self.size * self.size) as usize], self.x, self.y, self.size)
+            return SquareResult::new(vec![Self::calculate_color(prev); (self.size * self.size) as usize], self.x, self.y, self.size)
         }
-        let mut itterations = Vec::with_capacity((self.size * self.size) as usize);
+        let mut colors = Vec::with_capacity((self.size * self.size) as usize);
         for y in 0..self.size {
             for x in 0..self.size {
                 let c = Complex::new(
                     (self.x as f64 + x as f64) * stepsize,
                     (self.y as f64 + y as f64) * stepsize,
                 );
-                itterations.push(c.calculate_mandelbrot_iterations(self.max_iter));
+                colors.push(Self::calculate_color(c.calculate_mandelbrot_iterations(self.max_iter)));
             }
         }
-        SquareResult::new(itterations, self.x, self.y, self.size)
+        SquareResult::new(colors, self.x, self.y, self.size)
     }
 }
 
 #[derive(Debug, Clone)]
 struct SquareResult {
-    itterations: Vec<u32>,
+    colors: Vec<Rgb<u8>>,
     x: i64,
     y: i64,
     size: u32,
@@ -171,9 +174,9 @@ struct SquareResult {
 }
 
 impl SquareResult {
-    pub fn new(itterations: Vec<u32>, x: i64, y: i64, size: u32) -> Self {
+    pub fn new(colors: Vec<Rgb<u8>>, x: i64, y: i64, size: u32) -> Self {
         SquareResult {
-            itterations,
+            colors,
             x,
             y,
             size,
@@ -186,10 +189,10 @@ impl Iterator for SquareResult {
     type Item = Pixel;
     
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.itterations.len() {
+        if self.index >= self.colors.len() {
             return None
         }
-        let result = Pixel{ iterations: self.itterations[self.index], x: self.x + (self.index as i64 % self.size as i64), y: self.y + (self.index as i64 / self.size as i64) } ;
+        let result = Pixel{ color: self.colors[self.index], x: self.x + (self.index as i64 % self.size as i64), y: self.y + (self.index as i64 / self.size as i64) } ;
         self.index += 1;
         Some(result)
     }
@@ -198,5 +201,5 @@ impl Iterator for SquareResult {
 struct Pixel {
     x: i64,
     y: i64,
-    iterations: u32,
+    color: Rgb<u8>,
 }

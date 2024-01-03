@@ -1,7 +1,6 @@
 extern crate sdl2;
 extern crate image;
 extern crate rayon;
-
 use std::time::Duration;
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::event::Event;
@@ -13,12 +12,11 @@ mod complex;
 mod mandelbrot;
 use mandelbrot::Mandelbrot;
 
-
 pub fn main() -> Result<(), String> {
     let mut window_witdh = 800;
     let mut window_height = 600;
     let max_iter = 5000;
-    let mut mandelbrot = Mandelbrot::new(window_witdh, window_height, max_iter, -100, 0, 500);
+    let mut mandelbrot = Mandelbrot::new(window_witdh, window_height, max_iter, -100, 0, 250);
     
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -61,6 +59,10 @@ pub fn main() -> Result<(), String> {
                 },
                 Event::KeyDown { keycode: Some(Keycode::F11), .. } => {
                     fullscreen = !fullscreen;
+                },
+                Event::KeyDown { keycode: Some(Keycode::R), .. } => {
+                    mandelbrot = Mandelbrot::new(window_witdh, window_height, max_iter, -100, 0, 250);
+                    changed = true;
                 },
                 Event::MouseWheel { y, .. } => {
                     mandelbrot.zoom(y as i32, mouse_x, mouse_y);
