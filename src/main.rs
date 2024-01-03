@@ -40,6 +40,8 @@ pub fn main() -> Result<(), String> {
     
     let mut start: Option<(i32,i32)> = None;
     let mut changed = true;
+
+    let mut fullscreen = false;
     
     'running: loop {
         let mouse_x = event_pump.mouse_state().x();
@@ -56,6 +58,9 @@ pub fn main() -> Result<(), String> {
                 Event::Quit {..} |
                 Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                     break 'running
+                },
+                Event::KeyDown { keycode: Some(Keycode::F11), .. } => {
+                    fullscreen = !fullscreen;
                 },
                 Event::MouseWheel { y, .. } => {
                     mandelbrot.zoom(y as i32, mouse_x, mouse_y);
@@ -77,6 +82,12 @@ pub fn main() -> Result<(), String> {
                 }
                 _ => {}
             }
+        }
+
+        if fullscreen {
+            canvas.window_mut().set_fullscreen(sdl2::video::FullscreenType::Desktop).unwrap();
+        } else {
+            canvas.window_mut().set_fullscreen(sdl2::video::FullscreenType::Off).unwrap();
         }
         
         canvas.clear();

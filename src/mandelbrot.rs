@@ -28,7 +28,7 @@ impl Mandelbrot {
     }
 
     pub fn zoom(&mut self, zoom: i32, mouse_x: i32 ,mouse_y: i32) {
-        let new_zoom = (self.zoom as f64 * 1.33f64.powi(zoom)) as u64;
+        let new_zoom = u64::max((self.zoom as f64 * 1.33f64.powi(zoom)) as u64, 16);
         let x_offset = (mouse_x as i64 - self.width as i64 / 2) * (new_zoom as i64 - self.zoom as i64) / self.zoom as i64;
         let y_offset = (mouse_y as i64 - self.height as i64 / 2) * (new_zoom as i64 - self.zoom as i64) / self.zoom as i64;
         self.center_x = (self.center_x as f64 * new_zoom as f64 / self.zoom as f64) as i64 + x_offset as i64;
@@ -42,8 +42,7 @@ impl Mandelbrot {
         self.center_y += y;
     }
 
-    pub fn calculate_mandelbrot
-    (&mut self) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
+    pub fn calculate_mandelbrot(&mut self) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
         let square_size:u32 = 32;
         let mut imgbuf = ImageBuffer::new(self.width, self.height);
         let mut squares:Vec<Square> = Vec::new();
