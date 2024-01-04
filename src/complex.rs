@@ -11,7 +11,7 @@ impl Complex {
 
     fn square(&self) -> Self {
         Self {
-            real: self.real * self.real - self.imag * self.imag,
+            real: (self.real + self.imag) * (self.real - self.imag),
             imag: 2.0 * self.real * self.imag,
         }
     }
@@ -31,7 +31,7 @@ impl Complex {
         let mut z = Self::new(0.0, 0.0);
         for counter in 1..=max_iter {
             z = z.square().add(self);
-            if z.norm() > 4.0 {
+            if z.norm() >= 4.0 {
                 return counter;
             }
         }

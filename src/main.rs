@@ -2,17 +2,19 @@ extern crate sdl2;
 extern crate image;
 extern crate rayon;
 use std::time::Duration;
+
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::render::TextureCreator;
 use sdl2::video::WindowContext;
+use sdl2::video::FullscreenType::{Desktop, Off };
 
 mod complex;
 mod mandelbrot;
 use mandelbrot::Mandelbrot;
 
-pub fn main() -> Result<(), String> {
+fn main() -> Result<(), String> {
     let mut window_witdh = 800;
     let mut window_height = 600;
     let max_iter = 5000;
@@ -40,6 +42,7 @@ pub fn main() -> Result<(), String> {
     let mut changed = true;
 
     let mut fullscreen = false;
+
     
     'running: loop {
         let mouse_x = event_pump.mouse_state().x();
@@ -86,22 +89,20 @@ pub fn main() -> Result<(), String> {
             }
         }
 
-        if fullscreen {
-            canvas.window_mut().set_fullscreen(sdl2::video::FullscreenType::Desktop).unwrap();
-        } else {
-            canvas.window_mut().set_fullscreen(sdl2::video::FullscreenType::Off).unwrap();
-        }
+        canvas.window_mut().set_fullscreen(if fullscreen {Desktop} else {Off}).unwrap();
         
         canvas.clear();
         if changed {
-            let img = mandelbrot.calculate_mandelbrot();
+            let img: image::ImageBuffer<image::Rgb<u8>, Vec<u8>> = mandelbrot.calculate_mandelbrot();
             let img_data = img.into_raw();
             texture.update(None, &img_data, window_witdh as usize * 3).unwrap();
             changed = false;
+        } else {
+            ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 120));
         }
+
         canvas.copy(&texture, None, None).unwrap();
         canvas.present();
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 200));
     }
     Ok(())
 }
