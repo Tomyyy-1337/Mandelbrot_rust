@@ -71,16 +71,11 @@ impl Mandelbrot {
             })
             .collect();
 
-        square_results.iter().for_each(|(_, square_result)| {
-            for pixel in square_result.clone().into_iter() {
-                if (pixel.x - top_x) >= self.width as i64 || (pixel.y - top_y) >= self.height as i64 || pixel.x < top_x || pixel.y < top_y {
-                    continue
-                }
-                let x = (pixel.x - top_x) as u32;
-                let y = (pixel.y - top_y) as u32;
-                imgbuf.put_pixel(x, y, pixel.color);
-            }
-        });
+        for (_, square_result) in square_results.iter() {
+            square_result.clone()
+                .filter(|&Pixel{x,y,color:_}| x >= top_x && y >= top_y && x < top_x + self.width as i64 && y < top_y + self.height as i64)
+                .for_each(|Pixel{x,y,color}| imgbuf.put_pixel((x - top_x) as u32, (y - top_y) as u32, color));
+        }
 
         for (square, square_result) in square_results.into_iter() {
             self.last_squares.insert(square, square_result);
