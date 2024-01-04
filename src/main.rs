@@ -8,7 +8,8 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::render::TextureCreator;
 use sdl2::video::WindowContext;
-use sdl2::video::FullscreenType::{Desktop, Off };
+use sdl2::video::FullscreenType::{Desktop, Off};
+use sdl2::ttf::Font;
 
 mod complex;
 mod mandelbrot;
@@ -23,6 +24,10 @@ fn main() -> Result<(), String> {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
+    let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
+    let mut font: Font = ttf_context.load_font("font/VCR_OSD_MONO.ttf", 128).unwrap();
+    font.set_style(sdl2::ttf::FontStyle::NORMAL);
+
     let window = video_subsystem.window("Mandelbrot", window_witdh, window_height)
     .position_centered()
     .resizable()
@@ -30,7 +35,8 @@ fn main() -> Result<(), String> {
     .unwrap();
 
     let mut canvas = window.into_canvas().build().unwrap();
-    let texture_creator: TextureCreator<WindowContext> = canvas.texture_creator();
+
+    let texture_creator = canvas.texture_creator();
     let mut texture: sdl2::render::Texture<'_> = texture_creator.create_texture_streaming(PixelFormatEnum::RGB24, window_witdh, window_height).unwrap();
     canvas.set_draw_color(Color::RGB(0, 255, 255));
     canvas.clear();
@@ -42,6 +48,9 @@ fn main() -> Result<(), String> {
     let mut changed = true;
 
     let mut fullscreen = false;
+
+    let mut real = String::new();
+    let mut imag = String::new();
 
     
     'running: loop {
@@ -65,6 +74,14 @@ fn main() -> Result<(), String> {
                 },
                 Event::KeyDown { keycode: Some(Keycode::R), .. } => {
                     mandelbrot = Mandelbrot::new(window_witdh, window_height, max_iter, -100, 0, 250);
+                    changed = true;
+                },
+                Event::KeyDown { keycode: Some(Keycode::Up), .. } => {
+                    mandelbrot.increase_max_iter(mandelbrot.max_iter as i32);
+                    changed = true;
+                },
+                Event::KeyDown { keycode: Some(Keycode::Down), .. } => {
+                    mandelbrot.increase_max_iter(mandelbrot.max_iter as i32 / -2);
                     changed = true;
                 },
                 Event::MouseWheel { y, .. } => {
@@ -98,11 +115,43 @@ fn main() -> Result<(), String> {
             texture.update(None, &img_data, window_witdh as usize * 3).unwrap();
             changed = false;
         } else {
+            let stepsize = 1.0 / mandelbrot.zoom as f64;
+            real = format_float((mandelbrot.center_x + mouse_x as i64 - window_witdh as i64 / 2) as f64 * stepsize);
+            imag = format_float(-(mandelbrot.center_y + mouse_y as i64 - window_height as i64 / 2) as f64 * stepsize);
+
             ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 120));
         }
-
+        
         canvas.copy(&texture, None, None).unwrap();
+        draw_text(5, 28, &format!("Max Iterations: {}", mandelbrot.max_iter), &mut canvas, &texture_creator, &font);
+        draw_text(5, 51, &format!("Zoom: {:.2}x", mandelbrot.zoom as f32 / 250.0), &mut canvas, &texture_creator, &font);
+        draw_text(5, 5, &format!("C = {} + {}i", real, imag), &mut canvas, &texture_creator, &font); 
         canvas.present();
     }
     Ok(())
+}
+
+fn format_float(n: f64) -> String {
+    if n < 0.0 {
+        format!("{:.16}", n)
+    } else {
+        format!(" {:.16}", n)
+    }
+}
+
+fn draw_text(x: u32, y: u32, text: &str, canvas: &mut sdl2::render::Canvas<sdl2::video::Window>, texture_creator: &TextureCreator<WindowContext>, font: &Font) {
+    let surface = font
+        .render(text)
+        .blended(Color::RGBA(0, 0, 0, 255))
+        .map_err(|e| e.to_string()).unwrap();
+    let texture = texture_creator.create_texture_from_surface(&surface).unwrap();
+    let target = sdl2::rect::Rect::new(x as i32 + 1, y as i32 + 1, 16 * text.len() as u32, 18);
+    canvas.copy(&texture, None, Some(target)).unwrap();
+    let surface = font
+        .render(text)
+        .blended(Color::RGBA(255, 255, 255, 255))
+        .map_err(|e| e.to_string()).unwrap();
+    let texture = texture_creator.create_texture_from_surface(&surface).unwrap();
+    let target = sdl2::rect::Rect::new(x as i32, y as i32, 16 * text.len() as u32, 18);
+    canvas.copy(&texture, None, Some(target)).unwrap();
 }

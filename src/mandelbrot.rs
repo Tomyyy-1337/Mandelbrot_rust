@@ -42,6 +42,11 @@ impl Mandelbrot {
         self.center_y += y;
     }
 
+    pub fn increase_max_iter(&mut self, delta: i32) {
+        self.max_iter = (self.max_iter as i32 + delta) as u32;
+        self.last_squares = HashMap::new();
+    }
+
     pub fn calculate_mandelbrot(&mut self) -> ImageBuffer<image::Rgb<u8>, Vec<u8>> {
         let square_size:u32 = 32;
         let mut imgbuf = ImageBuffer::new(self.width, self.height);
