@@ -37,6 +37,21 @@ impl Mandelbrot {
         self.last_squares = HashMap::new();
     }
 
+    pub fn change_size(&self ,delta_width: u32, delta_height: u32) -> Self {
+        let width = self.width + delta_width;
+        let height = self.height + delta_height;
+        let zoom = self.zoom as f64 * height as f64 / self.height as f64;
+        Mandelbrot {
+            width,
+            height,
+            max_iter: self.max_iter,
+            center_x : (self.center_x as f64 * zoom / self.zoom as f64 ) as i64,
+            center_y : (self.center_y as f64 * zoom / self.zoom as f64) as i64,
+            zoom : zoom as u64,
+            last_squares: HashMap::new(),
+        }
+    }
+
     pub fn move_center(&mut self, x: i64, y: i64) {
         self.center_x += x;
         self.center_y += y;
@@ -105,11 +120,11 @@ impl Square {
     }
 
     fn calculate_color(color: u32) -> Rgb<u8> {
-        let num_colors = 160;
+        let num_colors = 161;
         if color == 0 {
             return Rgb([0,0,0]);
         } 
-        let limited_input = (4.0 * (color as f64).powf(0.9)) as u32 % num_colors + 20 as u32;
+        let limited_input = (3 * color) % num_colors + 30 as u32;
         let hue = (limited_input as f32 / num_colors as f32) * 2.0 * std::f32::consts::PI;  
         let r = ((hue.sin() * 0.5 + 0.5) * 255.0) as u8;
         let g = ((hue.cos() * 0.5 + 0.5) * 255.0) as u8;
@@ -124,7 +139,8 @@ impl Square {
             self.y as f64 * stepsize,
         ).calculate_mandelbrot_iterations(self.max_iter);
         let mut all_equal = true;
-        'outer: for a in (0..self.size as i64).step_by(2) {
+        let mut colors = vec![Rgb([0,0,0]); (self.size * self.size) as usize];
+        for a in 0..self.size as i64 {
             for b in [0,self.size as i64 - 1] {
                 let c = Complex::new(
                     (self.x + a) as f64 * stepsize,
@@ -133,8 +149,8 @@ impl Square {
                 let result = c.calculate_mandelbrot_iterations(self.max_iter);
                 if result != prev {
                     all_equal = false;
-                    break 'outer;
                 }                
+                colors[(b * self.size as i64 + a) as usize] = Self::calculate_color(result);
                 let c = Complex::new(
                     (self.x + b) as f64 * stepsize,
                     (self.y + a) as f64 * stepsize,
@@ -142,22 +158,20 @@ impl Square {
                 let result = c.calculate_mandelbrot_iterations(self.max_iter);
                 if result != prev {
                     all_equal = false;
-                    break 'outer;
-                    
                 }                
+                colors[(a * self.size as i64 + b) as usize] = Self::calculate_color(result);
             }
         } 
         if all_equal {
             return SquareResult::new(vec![Self::calculate_color(prev); (self.size * self.size) as usize], self.x, self.y, self.size)
         }
-        let mut colors = Vec::with_capacity((self.size * self.size) as usize);
-        for y in 0..self.size as i64 {
-            for x in 0..self.size as i64 {
+        for y in 1..(self.size-1) as i64 {
+            for x in 1..(self.size-1) as i64 {
                 let c = Complex::new(
                     (self.x + x) as f64 * stepsize,
                     (self.y + y) as f64 * stepsize,
                 );
-                colors.push(Self::calculate_color(c.calculate_mandelbrot_iterations(self.max_iter)));
+                colors[(y * self.size as i64 + x) as usize] = Self::calculate_color(c.calculate_mandelbrot_iterations(self.max_iter));
             }
         }
         SquareResult::new(colors, self.x, self.y, self.size)

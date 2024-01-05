@@ -51,7 +51,6 @@ fn main() -> Result<(), String> {
 
     let mut real = String::new();
     let mut imag = String::new();
-
     
     'running: loop {
         let mouse_x = event_pump.mouse_state().x();
@@ -83,6 +82,9 @@ fn main() -> Result<(), String> {
                 Event::KeyDown { keycode: Some(Keycode::Down), .. } => {
                     mandelbrot.increase_max_iter(mandelbrot.max_iter as i32 / -2);
                     changed = true;
+                },
+                Event::KeyDown { keycode: Some(Keycode::Space), .. } => {
+                    save_image(&mandelbrot, window_witdh, window_height);
                 },
                 Event::MouseWheel { y, .. } => {
                     mandelbrot.zoom(y as i32, mouse_x, mouse_y);
@@ -124,11 +126,26 @@ fn main() -> Result<(), String> {
         
         canvas.copy(&texture, None, None).unwrap();
         draw_text(5, 28, &format!("Max Iterations: {}", mandelbrot.max_iter), &mut canvas, &texture_creator, &font);
-        draw_text(5, 51, &format!("Zoom: {:.2}x", mandelbrot.zoom as f32 / 250.0), &mut canvas, &texture_creator, &font);
+        draw_text(5, 51, &format!("Zoom: {:.2}x", mandelbrot.zoom as f32 / 400.0), &mut canvas, &texture_creator, &font);
         draw_text(5, 5, &format!("C = {} + {}i", real, imag), &mut canvas, &texture_creator, &font); 
         canvas.present();
     }
     Ok(())
+}
+
+fn save_image(mandelbrot: &Mandelbrot, window_witdh: u32, window_height: u32) {
+    let _ = std::fs::create_dir("img");
+    let mut mandelbrot_high_res = mandelbrot.change_size(window_witdh, window_height);
+    let img: image::ImageBuffer<image::Rgb<u8>, Vec<u8>> = mandelbrot_high_res.calculate_mandelbrot();
+    let real = mandelbrot.center_x as f64 / mandelbrot.zoom as f64;
+    let imag = mandelbrot.center_y as f64 / mandelbrot.zoom as f64;
+    let c = format!("{}+{}i", real, imag);
+    let zoom = format!("{:.1}x", mandelbrot.zoom as f32 / 400.0);
+    let img_name = format!("img/{c}_{zoom}.png");
+    match img.save(&img_name) {
+        Ok(_) => println!("Saved image: {img_name}"),
+        Err(e) => println!("Error saving image: {}", e),
+    }
 }
 
 fn format_float(n: f64) -> String {
