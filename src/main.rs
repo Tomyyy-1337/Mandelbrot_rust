@@ -121,7 +121,7 @@ fn main() -> Result<(), String> {
             real = format_float((mandelbrot.center_x + mouse_x as i64 - window_witdh as i64 / 2) as f64 * stepsize);
             imag = format_float(-(mandelbrot.center_y + mouse_y as i64 - window_height as i64 / 2) as f64 * stepsize);
 
-            ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 120));
+            ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 200));
         }
         
         canvas.copy(&texture, None, None).unwrap();
